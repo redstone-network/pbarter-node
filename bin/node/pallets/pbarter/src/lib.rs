@@ -249,7 +249,7 @@ impl<T: Config> Pallet<T> {
 	fn check_and_triger_match(_block_number: T::BlockNumber) -> Result<(), &'static str> {
 		// Make an external HTTP request to fetch the current price.
 		// Note this call will block until response is received.
-		let _rt = Self::triger_match().map_err(|_| "Failed to fetch price")?;
+		let _rt = Self::triger_match().map_err(|_| "Failed to triger match")?;
 
 		Ok(())
 	}
