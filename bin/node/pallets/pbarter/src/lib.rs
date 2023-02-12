@@ -49,24 +49,15 @@ use codec::{Decode, Encode};
 use frame_support::traits::Get;
 use frame_system::{
 	self as system,
-	offchain::{
-		AppCrypto, CreateSignedTransaction, SendSignedTransaction, SendUnsignedTransaction,
-		SignedPayload, Signer, SigningTypes, SubmitTransaction,
-	},
+	offchain::{AppCrypto, CreateSignedTransaction, SignedPayload, SigningTypes},
 };
-use lite_json::json::JsonValue;
+
 use sp_core::crypto::KeyTypeId;
 use sp_runtime::{
-	offchain::{
-		http,
-		storage::{MutateStorageError, StorageRetrievalError, StorageValueRef},
-		Duration,
-	},
-	traits::Zero,
-	transaction_validity::{InvalidTransaction, TransactionValidity, ValidTransaction},
+	offchain::{http, Duration},
+	transaction_validity::{InvalidTransaction, TransactionValidity},
 	RuntimeDebug,
 };
-use sp_std::vec::Vec;
 
 #[cfg(test)]
 mod tests;
@@ -201,8 +192,6 @@ pub mod pallet {
 	#[pallet::event]
 	#[pallet::generate_deposit(pub(super) fn deposit_event)]
 	pub enum Event<T: Config> {
-		/// Event generated when new price is accepted to contribute to the average.
-		TargetMatch { id: u64 },
 	}
 
 	#[pallet::validate_unsigned]
@@ -214,7 +203,10 @@ pub mod pallet {
 		/// By default unsigned transactions are disallowed, but implementing the validator
 		/// here we make sure that some particular calls (the ones produced by offchain worker)
 		/// are being whitelisted and marked as valid.
-		fn validate_unsigned(_source: TransactionSource, call: &Self::Call) -> TransactionValidity {
+		fn validate_unsigned(
+			_source: TransactionSource,
+			_call: &Self::Call,
+		) -> TransactionValidity {
 			// Firstly let's check that we call the right function.
 			InvalidTransaction::Call.into()
 		}
@@ -252,20 +244,12 @@ impl<T: SigningTypes> SignedPayload<T> for PricePayload<T::Public, T::BlockNumbe
 	}
 }
 
-enum TransactionType {
-	Signed,
-	UnsignedForAny,
-	UnsignedForAll,
-	Raw,
-	None,
-}
-
 impl<T: Config> Pallet<T> {
 	/// A helper function to fetch the price and send a raw unsigned transaction.
-	fn check_and_triger_match(block_number: T::BlockNumber) -> Result<(), &'static str> {
+	fn check_and_triger_match(_block_number: T::BlockNumber) -> Result<(), &'static str> {
 		// Make an external HTTP request to fetch the current price.
 		// Note this call will block until response is received.
-		let rt = Self::triger_match().map_err(|_| "Failed to fetch price")?;
+		let _rt = Self::triger_match().map_err(|_| "Failed to fetch price")?;
 
 		Ok(())
 	}
