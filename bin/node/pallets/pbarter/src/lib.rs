@@ -54,7 +54,11 @@ use frame_system::{
 
 use sp_core::crypto::KeyTypeId;
 use sp_runtime::{
-	offchain::{http, Duration},
+	offchain::{
+		http,
+		storage::{StorageRetrievalError, StorageValueRef},
+		Duration,
+	},
 	transaction_validity::{InvalidTransaction, TransactionValidity},
 	RuntimeDebug,
 };
@@ -142,10 +146,6 @@ pub mod pallet {
 		/// multiple pallets send unsigned transactions.
 		#[pallet::constant]
 		type UnsignedPriority: Get<TransactionPriority>;
-
-		/// Maximum number of prices.
-		#[pallet::constant]
-		type MaxPrices: Get<u32>;
 	}
 
 	#[pallet::pallet]
@@ -191,8 +191,7 @@ pub mod pallet {
 	/// Events for the pallet.
 	#[pallet::event]
 	#[pallet::generate_deposit(pub(super) fn deposit_event)]
-	pub enum Event<T: Config> {
-	}
+	pub enum Event<T: Config> {}
 
 	#[pallet::validate_unsigned]
 	impl<T: Config> ValidateUnsigned for Pallet<T> {
@@ -211,22 +210,6 @@ pub mod pallet {
 			InvalidTransaction::Call.into()
 		}
 	}
-
-	/// A vector of recently submitted prices.
-	///
-	/// This is used to calculate average price, should have bounded size.
-	#[pallet::storage]
-	#[pallet::getter(fn prices)]
-	pub(super) type Prices<T: Config> = StorageValue<_, BoundedVec<u32, T::MaxPrices>, ValueQuery>;
-
-	/// Defines the block when next unsigned transaction will be accepted.
-	///
-	/// To prevent spam of unsigned (and unpayed!) transactions on the network,
-	/// we only allow one transaction every `T::UnsignedInterval` blocks.
-	/// This storage entry defines when new transaction is going to be accepted.
-	#[pallet::storage]
-	#[pallet::getter(fn next_unsigned_at)]
-	pub(super) type NextUnsignedAt<T: Config> = StorageValue<_, T::BlockNumber, ValueQuery>;
 }
 
 /// Payload used by this example crate to hold price
@@ -246,10 +229,39 @@ impl<T: SigningTypes> SignedPayload<T> for PricePayload<T::Public, T::BlockNumbe
 
 impl<T: Config> Pallet<T> {
 	/// A helper function to fetch the price and send a raw unsigned transaction.
-	fn check_and_triger_match(_block_number: T::BlockNumber) -> Result<(), &'static str> {
-		// Make an external HTTP request to fetch the current price.
-		// Note this call will block until response is received.
-		let _rt = Self::triger_match().map_err(|_| "Failed to triger match")?;
+	fn check_and_triger_match(block_number: T::BlockNumber) -> Result<(), &'static str> {
+		/// A friendlier name for the error that is going to be returned in case we are in the grace
+		/// period.
+		const RECENTLY_SENT: () = ();
+
+		// Start off by creating a reference to Local Storage value.
+		// Since the local storage is common for all offchain workers, it's a good practice
+		// to prepend your entry with the module name.
+		let val = StorageValueRef::persistent(b"example_ocw::last_send");
+		// The Local Storage is persisted and shared between runs of the offchain workers,
+		// and offchain workers may run concurrently. We can use the `mutate` function, to
+		// write a storage entry in an atomic fashion. Under the hood it uses `compare_and_set`
+		// low-level method of local storage API, which means that only one worker
+		// will be able to "acquire a lock" and send a transaction if multiple workers
+		// happen to be executed concurrently.
+		let res = val.mutate(|last_send: Result<Option<T::BlockNumber>, StorageRetrievalError>| {
+			match last_send {
+				// If we already have a value in storage and the block number is recent enough
+				// we avoid sending another transaction at this time.
+				Ok(Some(block)) if block_number < block + T::GracePeriod::get() =>
+					Err(RECENTLY_SENT),
+				// In every other case we attempt to acquire the lock and send a transaction.
+				_ => Ok(block_number),
+			}
+		});
+
+		match res {
+			// The value has been set correctly, which means we can safely send a transaction now.
+			Ok(_) => {
+				let _rt = Self::triger_match().map_err(|_| "Failed to triger match")?;
+			},
+			_ => {},
+		}
 
 		Ok(())
 	}

@@ -1703,7 +1703,6 @@ parameter_types! {
 	pub const GracePeriod: BlockNumber = 3;
 	pub const UnsignedInterval: BlockNumber = 3;
 	pub const UnsignedPriority: BlockNumber = 3;
-	pub const MaxPrices: u32 = u32::max_value();
 }
 
 impl pallet_pbarter::Config for Runtime {
@@ -1712,7 +1711,6 @@ impl pallet_pbarter::Config for Runtime {
 	type GracePeriod = GracePeriod;
 	type UnsignedInterval = UnsignedInterval;
 	type UnsignedPriority = UnsignedPriority;
-	type MaxPrices = MaxPrices;
 }
 
 construct_runtime!(
