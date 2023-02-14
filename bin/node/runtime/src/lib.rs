@@ -1700,7 +1700,7 @@ impl frame_benchmarking_pallet_pov::Config for Runtime {
 }
 
 parameter_types! {
-	pub const GracePeriod: BlockNumber = 3;
+	pub const GracePeriod: BlockNumber = 6;
 	pub const UnsignedInterval: BlockNumber = 3;
 	pub const UnsignedPriority: BlockNumber = 3;
 }
