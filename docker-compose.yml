@@ -1,0 +1,114 @@
+version: "3.5"
+networks:
+  redstonenetwork:
+    name: redstonenetwork
+
+services:
+  validator-a:
+    ports:
+      - "19944:9944"
+      - "9615:9615"
+    volumes:
+      - './data-a:/data'
+    image: baidang201/pbarter-node:latest
+    command:
+      - "/usr/local/bin/substrate"
+      - "--node-key"
+      - "0000000000000000000000000000000000000000000000000000000000000001"
+      - "--base-path"
+      - "/data"
+      - "--chain=local"
+      - "--port"
+      - "30333"
+      - "--validator"
+      - "--alice"
+      - "--bootnodes"
+      - "/dns/validator-b/tcp/30333/p2p/12D3KooWHdiAxVd8uMQR1hGWXccidmfCwLqcMpGwR6QcTP6QRMuD"
+      # Not only bind to localhost.
+      - "--unsafe-ws-external"
+      - "--unsafe-rpc-external"
+      #- "--log"
+      #- "sub-libp2p=trace"
+      - "--no-telemetry"
+      - "--rpc-cors"
+      - "all"
+      #- "--prometheus-external"
+
+    restart: always
+    networks:
+      redstonenetwork:
+        aliases: 
+          - redstonenetwork
+
+  validator-b:
+    image: baidang201/pbarter-node:latest
+    ports:
+      - "19945:9944"
+    volumes:
+      - './data-b:/data'
+    command:
+      - "/usr/local/bin/substrate"
+      - "--node-key"
+      - "0000000000000000000000000000000000000000000000000000000000000002"
+      - "--base-path"
+      - "/data"
+      - "--chain=local"
+      - "--port"
+      - "30333"
+      - "--validator"
+      - "--bob"
+      - "--bootnodes"
+      - "/dns/validator-a/tcp/30333/p2p/12D3KooWEyoppNCUx8Yx66oV9fJnriXwCcXwDDUA2kj6vnc6iDEp"
+      - "--no-telemetry"
+      - "--rpc-cors"
+      - "all"
+      # Not only bind to localhost.
+      - "--unsafe-ws-external"
+      - "--unsafe-rpc-external"
+      #- "--log"
+      #- "sub-libp2p=trace"
+      #- "--prometheus-external"
+
+    restart: always
+    networks:
+      redstonenetwork:
+        aliases: 
+          - redstonenetwork
+
+  node-c:
+    image: baidang201/pbarter-node:latest
+    ports:
+      - "9944:9944"
+    volumes:
+      - './data-c:/data'
+    command:
+      - "/usr/local/bin/substrate"
+      - "--node-key"
+      - "0000000000000000000000000000000000000000000000000000000000000003"
+      - "--base-path"
+      - "/data"
+      - "--chain=local"
+      - "--port"
+      - "30333"
+      #- "--light"
+      - "--bootnodes"
+      - "/dns/validator-a/tcp/30333/p2p/12D3KooWEyoppNCUx8Yx66oV9fJnriXwCcXwDDUA2kj6vnc6iDEp"
+      - "--bootnodes"
+      - "/dns/validator-b/tcp/30333/p2p/12D3KooWHdiAxVd8uMQR1hGWXccidmfCwLqcMpGwR6QcTP6QRMuD"
+      - "--no-telemetry"
+      - "--rpc-cors"
+      - "all"
+      # Not only bind to localhost.
+      - "--unsafe-ws-external"
+      - "--unsafe-rpc-external"
+      #- "--log"
+      #- "sub-libp2p=trace"
+      #- "--prometheus-external"
+      - "--state-pruning"
+      - "archive"
+
+    restart: always
+    networks:
+      redstonenetwork:
+        aliases: 
+          - redstonenetwork
